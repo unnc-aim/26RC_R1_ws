@@ -1,0 +1,12 @@
+[submodule "src/EcatV2_Master"]
+	path = src/EcatV2_Master
+	url = https://github.com/AIMEtherCAT/EcatV2_Master.git
+[submodule "src/r2_suction_control"]
+	path = src/r2_suction_control
+	url = git@github.com:unnc-aim/r2_suction_control.git
+[submodule "src/universal_controllers_v2"]
+	path = src/universal_controllers_v2
+	url = https://github.com/AIM-EC/universal_controllers_v2.git
+[submodule "src/arm_controller"]
+	path = src/arm_controller
+	url = /home/aim/r1_ws/src/arm_controller
