@@ -9,4 +9,7 @@
 	url = https://github.com/AIM-EC/universal_controllers_v2.git
 [submodule "src/arm_controller"]
 	path = src/arm_controller
-	url = /home/aim/r1_ws/src/arm_controller
+	url = https://github.com/lvxin1024/arm_controller.git
+[submodule "src/r1_controller"]
+	path = src/r1_controller
+	url = https://github.com/lvxin1024/r1_controller.git
