@@ -110,7 +110,7 @@ slaves:
             sdowrite_control_period: !uint16_t 1
             sdowrite_can_id: !uint16_t 0x02
             sdowrite_master_id: !uint16_t 0x12
-            sdowrite_can_inst: !uint8_t 1
+            sdowrite_can_inst: !uint8_t 2
             sdowrite_control_type: !uint8_t 2
             conf_pmax: !float 3.141592653589793
             conf_vmax: !float 30
