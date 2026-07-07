@@ -1,0 +1,121 @@
+# ROS2 systemd automation configuration
+#
+# Notes:
+# 1) actions.default_action defines the action used when no CLI action is provided
+# 2) workspaces can define multiple ROS2 workspaces, each with its own services
+# 3) each service is converted into a dedicated systemd unit file
+# 4) services can optionally declare depends_on (list) for unit dependencies
+#    Example: if A depends_on B, unit A will include Requires=B and After=B
+# 5) services can optionally declare service_options (list of raw systemd [Service] lines)
+#    Example: CapabilityBoundingSet=... / AmbientCapabilities=...
+# 6) services can set enable: false to start without auto-start on boot (default: true)
+# 7) services can set explicit_start: true to EXCLUDE them from default start/enable/restart
+#    (apply, make start/enable/restart). They are still installed (unit file written) but only
+#    started when explicitly targeted or via -a/--all. Useful for on-demand services (e.g. Foxglove).
+# 8) services can set explicit_stop: true to GUARD a long-running service. It is excluded from
+#    default stop/disable/uninstall (and update's stop-previous), and during apply/update it is left
+#    running unless its config changed — then you're prompted to reinstall/restart it (-f skips).
+# 9) workspaces can set ros_domain_id to isolate DDS traffic per workspace
+# 10) workspaces can use setup_scripts (list) instead of setup_script for multi-source
+# 11) use 'sudo ros2-systemd-manager set [-d [N]] [-r [cyclonedds|fastrtps]] [-l [0|1]]' to write the
+#    ROS DDS env (ROS_DOMAIN_ID / RMW_IMPLEMENTATION / ROS_LOCALHOST_ONLY) into all shell rc/profile
+#    files. Only the keys you pass are written; a bare flag (-d/-r/-l without a value) or no flags
+#    at all prompts for confirmation before applying the default value(s):
+#    domain=0, rmw=cyclonedds, localhost-only=1.
+#    Typical use: fix a DDS mismatch where Foxglove shows topics but `ros2 topic list` does not —
+#    set your shell's DDS env to match your services (e.g. `set -d 42`), then open a new terminal.
+#
+# Supported actions (each scoped to THIS directory's config by default):
+#   -g/--global   operate across every tracked config (every directory you have ever applied)
+#   -a/--all      include explicit_start/explicit_stop services (override the guards)
+#   -f/--force    skip all confirmation prompts (assume yes)
+# - upgrade                Self-upgrade this tool via pip install --upgrade
+# - install                Install unit files only, do not start or enable
+# - apply                  Install + start + enable on boot
+# - uninstall              Uninstall (stop, disable, remove unit files)
+# - update                 Stop this config's previous units, remove its stale units, then install/start/enable current units
+# - makefile               Regenerate Makefile only (no systemd changes)
+# - list                   Print this config's unit names (list --all: every tracked config)
+
+# Optional; when omitted, default action is `apply`.
+# actions:
+#   default_action: apply
+
+# Optional; when omitted defaults are used.
+# makefile:
+#   output_path: ./ros2-systemd-manager.mk
+#   command: ros2-systemd-manager
+
+systemd:
+  unit_dir: /etc/systemd/system
+  wanted_by: multi-user.target
+
+runtime:
+  # Default runtime identity for services when use_root is omitted or false.
+  # Set service.use_root: true to force that specific service to run as root.
+  user: aim
+  group: aim
+  home: /home/aim
+  shell: /bin/bash
+  restart: on-failure
+  restart_sec: 3
+
+workspaces:
+  r1_ws: # Workspace key, selectable via --workspace-key
+    path: /home/aim/r1_ws
+    setup_script: install/setup.bash
+    # setup_scripts: # Optional: use instead of setup_script to source multiple scripts in order
+    #   - /opt/ros/humble/setup.bash
+    #   - install/setup.bash
+    # ros_domain_id: 0 # Optional: set ROS_DOMAIN_ID to isolate DDS traffic for this workspace
+    services:
+      # Example of a service that:
+      #  - is guarded by explicit_stop: not auto-stopped/removed, and only reinstalled/restarted on config change
+      - unit_name: ros2-foxglove-bridge.service
+        description: ROS2 Foxglove Bridge
+        explicit_stop: true # Optional: default false. Guards a long-running service. It is excluded from default
+                            # `make stop`/`disable`, `uninstall`, and `update`'s stop-previous. During `apply`/`update`
+                            # it is LEFT RUNNING unless its config changed — then you're asked to reinstall/restart it
+                            # (default yes; `-f` skips the prompt; `-a/--all` forces inclusion).
+                            # Stop/restart it on demand via `make stop-ros2-foxglove-bridge` / `make restart-...`.
+        launch_command: ros2 launch foxglove_bridge foxglove_bridge_launch.xml
+
+      # Example of a service that:
+      #  - Requires specific capabilities (CAP_NET_RAW, CAP_NET_ADMIN) to run without root
+      - unit_name: ros2-soem-bringup.service
+        description: ROS2 Simple Open EtherCAT Master Bringup (https://github.com/AIMEtherCAT/EcatV2_Master)
+        use_root: false # Optional: default false. When true, force this service to run as root.
+        service_options: # Example of granting specific capabilities to a service without running as root
+          - CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
+          - AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+        launch_command: ros2 launch soem_bringup bringup.launch.py
+
+      # Example of a service that:
+      #  - Depends on another service (ros2-soem-bringup.service)
+      #  - May perform dangerous operations (e.g. motor control) and
+      #  - should not be auto-started on boot (enable: false) and
+      #  - should not be started with other services by default (explicit_start: true)
+      - unit_name: ros2-infantry-chassis.service
+        description: ROS2 Infantry Chassis Controller
+        depends_on:
+          - ros2-soem-bringup.service
+        explicit_start: true # Optional: default false. When true, this service is NOT auto-started by
+                             # apply / make start / make enable / make restart — start it on demand via
+                             # `make start-ros2-infantry-chassis`, or include the generally commands with `-a/--all`.
+                             # Note: explicit_start does NOT prevent auto-start on boot if enable: true.
+        enable: false # Optional: default true. Start on demand, do not auto-start on boot
+        launch_command: ros2 launch infantry_controller infantry_chassis.launch.py
+
+      # Example of a service that uses CPU affinity to restrict which cores it can run on.
+      - unit_name: ros2-sp-vision-autoaim.service
+        description: TongjiSuperPower/sp_vision_25 Auto Aim (via self defined sp_vision_launch)
+        service_options:
+          - CPUAffinity=1 2 3 # Example of setting CPU affinity for a service
+        launch_command: ros2 launch sp_vision_launch sp_vision.launch.py config:=sentry.yaml
+
+  # You can define additional workspaces with their own services here, e.g.:
+  # another_ws:
+  #   path: ...
+  #   ros_domain_id: 42 # Isolate this workspace on DDS domain 42
+  #   setup_script: install/setup.bash
+  #   ...
