@@ -14,5 +14,5 @@
 	path = src/r1_controller
 	url = git@github.com:unnc-aim/26RC_R1_controller.git
 [submodule "src/aruco_publisher"]
-	path = src/26RC_R1_aruco_publisher
+	path = src/aruco_publisher
 	url = git@github.com:unnc-aim/26RC_R1_aruco_publisher
