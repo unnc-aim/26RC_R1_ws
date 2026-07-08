@@ -89,29 +89,48 @@ workspaces:
           - CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
           - AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
         launch_command: ros2 launch soem_bringup bringup.launch.py
+      
+      - unit_name: r1-controller.service
+        description: ROS2 R1 Controller
+        depends_on:
+          - ros2-soem-bringup.service
+        launch_command: ros2 launch r1_controller r1_bringup.launch.py
+
+      - unit_name: suction-control.service
+        description: ROS2 Suction Control
+        depends_on:
+          - ros2-soem-bringup.service
+        launch_command: ros2 launch suction_control suction_control_r1.launch.py
+
+      - unit_name: arm-control.service
+        description: ROS2 Arm Control
+        # explicit_start: true
+        depends_on:
+          - ros2-soem-bringup.service
+        launch_command: ros2 launch arm_controller arm_controller.launch.py
 
       # Example of a service that:
       #  - Depends on another service (ros2-soem-bringup.service)
       #  - May perform dangerous operations (e.g. motor control) and
       #  - should not be auto-started on boot (enable: false) and
       #  - should not be started with other services by default (explicit_start: true)
-      - unit_name: ros2-infantry-chassis.service
-        description: ROS2 Infantry Chassis Controller
-        depends_on:
-          - ros2-soem-bringup.service
-        explicit_start: true # Optional: default false. When true, this service is NOT auto-started by
-                             # apply / make start / make enable / make restart — start it on demand via
-                             # `make start-ros2-infantry-chassis`, or include the generally commands with `-a/--all`.
-                             # Note: explicit_start does NOT prevent auto-start on boot if enable: true.
-        enable: false # Optional: default true. Start on demand, do not auto-start on boot
-        launch_command: ros2 launch infantry_controller infantry_chassis.launch.py
+      # - unit_name: ros2-infantry-chassis.service
+      #   description: ROS2 Infantry Chassis Controller
+      #   depends_on:
+      #     - ros2-soem-bringup.service
+      #   explicit_start: true # Optional: default false. When true, this service is NOT auto-started by
+      #                        # apply / make start / make enable / make restart — start it on demand via
+      #                        # `make start-ros2-infantry-chassis`, or include the generally commands with `-a/--all`.
+      #                        # Note: explicit_start does NOT prevent auto-start on boot if enable: true.
+      #   enable: false # Optional: default true. Start on demand, do not auto-start on boot
+      #   launch_command: ros2 launch infantry_controller infantry_chassis.launch.py
 
       # Example of a service that uses CPU affinity to restrict which cores it can run on.
-      - unit_name: ros2-sp-vision-autoaim.service
-        description: TongjiSuperPower/sp_vision_25 Auto Aim (via self defined sp_vision_launch)
-        service_options:
-          - CPUAffinity=1 2 3 # Example of setting CPU affinity for a service
-        launch_command: ros2 launch sp_vision_launch sp_vision.launch.py config:=sentry.yaml
+      # - unit_name: ros2-sp-vision-autoaim.service
+      #   description: TongjiSuperPower/sp_vision_25 Auto Aim (via self defined sp_vision_launch)
+      #   service_options:
+      #     - CPUAffinity=1 2 3 # Example of setting CPU affinity for a service
+      #   launch_command: ros2 launch sp_vision_launch sp_vision.launch.py config:=sentry.yaml
 
   # You can define additional workspaces with their own services here, e.g.:
   # another_ws:
