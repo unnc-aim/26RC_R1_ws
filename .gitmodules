@@ -6,7 +6,7 @@
 	url = git@github.com:unnc-aim/suction_control.git
 [submodule "src/universal_controllers_v2"]
 	path = src/universal_controllers_v2
-	url = git@github.com:unnc-aim/26RC_universal_controllers_v2.git
+	url = git@github.com:unnc-aim/universal_controllers_v2.git
 [submodule "src/arm_controller"]
 	path = src/arm_controller
 	url = git@github.com:unnc-aim/26RC_R1_arm_controller.git
